@@ -1,0 +1,53 @@
+import json
+import time
+from web3 import Web3
+
+# Constants
+INFURA_URL = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"  # Replace with your Infura URL
+WHALER_THRESHOLD = 1000 * 10**18  # 1000 ETH in Wei (Ethereum is in Wei, not Ether)
+CHECK_INTERVAL = 10  # In seconds
+
+# Initialize Web3 connection
+w3 = Web3(Web3.HTTPProvider(INFURA_URL))
+
+# Check if the connection is successful
+if not w3.isConnected():
+    print("Failed to connect to Ethereum network")
+    exit()
+
+def check_large_transactions():
+    # Get the latest block number
+    latest_block = w3.eth.blockNumber
+    print(f"Latest Block: {latest_block}")
+
+    # Iterate over the latest block's transactions
+    block = w3.eth.getBlock(latest_block, full_transactions=True)
+
+    for tx in block.transactions:
+        # Check if the transaction value exceeds the whale threshold
+        if tx['value'] >= WHALER_THRESHOLD:
+            from_address = tx['from']
+            to_address = tx['to']
+            value = w3.fromWei(tx['value'], 'ether')  # Convert value from Wei to Ether
+            hash = tx['hash'].hex()
+
+            print(f"\n[WHALER ALERT] Large Transaction Found!")
+            print(f"Transaction Hash: {hash}")
+            print(f"From: {from_address}")
+            print(f"To: {to_address}")
+            print(f"Value: {value} ETH")
+            print(f"Block Number: {latest_block}")
+            print("-" * 50)
+
+def track_whale_transactions():
+    while True:
+        try:
+            check_large_transactions()
+            time.sleep(CHECK_INTERVAL)  # Wait for the next block
+        except Exception as e:
+            print(f"Error: {e}")
+            time.sleep(CHECK_INTERVAL)  # Wait before retrying in case of error
+
+if __name__ == "__main__":
+    print("Tracking whale transactions on Ethereum...")
+    track_whale_transactions()
